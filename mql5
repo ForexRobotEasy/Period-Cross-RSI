@@ -1,0 +1,114 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                                  Period Cross RSI |
+//|                                          Developed by Forex Robot Easy Team |
+//|                                          Website: forexroboteasy.com |
+//+------------------------------------------------------------------+
+
+#property copyright 'Forex Robot Easy Team'
+#property link      'forexroboteasy.com'
+#property version   '1.0'
+#property strict
+
+// Input parameters
+input int RSI_Period1 = 14; // First RSI period
+input int RSI_Period2 = 28; // Second RSI period
+input int AscendingZone = 70; // Upper threshold for ascending zone
+input int DescendingZone = 30; // Lower threshold for descending zone
+
+// Global variables
+double RSI1Buffer[];
+double RSI2Buffer[];
+double AscendingZoneBuffer[];
+double DescendingZoneBuffer[];
+int prevCross = 0;
+
+// Custom indicator initialization function
+int OnInit()
+{
+    // Set indicator buffers
+    SetIndexBuffer(0, RSI1Buffer);
+    SetIndexBuffer(1, RSI2Buffer);
+    SetIndexBuffer(2, AscendingZoneBuffer);
+    SetIndexBuffer(3, DescendingZoneBuffer);
+
+    // Set indicator labels
+    SetIndexLabel(0, 'RSI1');
+    SetIndexLabel(1, 'RSI2');
+    SetIndexLabel(2, 'Ascending Zone');
+    SetIndexLabel(3, 'Descending Zone');
+
+    // Set indicator style
+    SetIndexStyle(0, DRAW_LINE);
+    SetIndexStyle(1, DRAW_LINE);
+    SetIndexStyle(2, DRAW_COLOR_LINE);
+    SetIndexStyle(3, DRAW_COLOR_LINE);
+
+    // Set indicator colors
+    SetIndexColor(0, clrDodgerBlue);
+    SetIndexColor(1, clrRed);
+    SetIndexColor(2, clrLimeGreen);
+    SetIndexColor(3, clrRed);
+
+    return(INIT_SUCCEEDED);
+}
+
+// Custom indicator calculation function
+int OnCalculate(const int rates_total, const int prev_calculated, const datetime &time[], const double &open[],
+                const double &high[], const double &low[], const double &close[], const long &tick_volume[],
+                const long &volume[], const int &spread[])
+{
+    // Calculate RSI values
+    int rsi1Count = iRSI(Symbol(), PERIOD_CURRENT, RSI_Period1, PRICE_CLOSE, RSI1Buffer);
+    int rsi2Count = iRSI(Symbol(), PERIOD_CURRENT, RSI_Period2, PRICE_CLOSE, RSI2Buffer);
+
+    // Calculate ascending and descending zones
+    for(int i = 0; i < rates_total; i++)
+    {
+        if (RSI1Buffer[i] > AscendingZone && RSI2Buffer[i] > AscendingZone)
+        {
+            AscendingZoneBuffer[i] = 1;
+        }
+        else
+        {
+            AscendingZoneBuffer[i] = 0;
+        }
+
+        if (RSI1Buffer[i] < DescendingZone && RSI2Buffer[i] < DescendingZone)
+        {
+            DescendingZoneBuffer[i] = 1;
+        }
+        else
+        {
+            DescendingZoneBuffer[i] = 0;
+        }
+    }
+
+    // Check for crossover
+    int cross = 0;
+    if (RSI1Buffer[rates_total-2] < RSI2Buffer[rates_total-2] && RSI1Buffer[rates_total-1] > RSI2Buffer[rates_total-1])
+    {
+        cross = 1;
+    }
+    else if (RSI1Buffer[rates_total-2] > RSI2Buffer[rates_total-2] && RSI1Buffer[rates_total-1] < RSI2Buffer[rates_total-1])
+    {
+        cross = -1;
+    }
+
+    // Display trading signals
+    if (cross != prevCross)
+    {
+        if (cross == 1)
+        {
+            Print('Buy signal');
+        }
+        else if (cross == -1)
+        {
+            Print('Sell signal');
+        }
+    }
+
+    prevCross = cross;
+
+    return(rates_total);
+}
